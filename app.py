@@ -5,6 +5,7 @@ import seaborn as sns
 
 
 st.sidebar.title("Chat Analyzer")
+st.sidebar.text("Export your chat from whatsapp and upload it here to get your analysis. ")
 
 
 uploaded_file = st.sidebar.file_uploader("Choose a file")

@@ -21,6 +21,8 @@ def fetch_stats(selected_user,df):
 
     #fetch the number of media messages
     #num_media_messages=df[df['message']== '<Media omitted>\n'].shape[0]
+    #num_media_messages = df[df['message'].str.contains('Media omitted', na=False)].shape[0]
+    df['message'] = df['message'].astype(str)
     num_media_messages = df[df['message'].str.contains('Media omitted', na=False)].shape[0]
 
     #fetching the number of links shared in a group
@@ -35,31 +37,79 @@ def most_busy_users(df):
         columns={'index': 'name', 'user': 'percent'})
     return x,df
 
-def create_wordcloud(selected_user,df):
+# def create_wordcloud(selected_user,df):
+#     if selected_user != 'Overall':
+#         df = df[df['user'] == selected_user]
+#     wc =WordCloud(width=500, height=500, min_font_size=10,background_color='white')
+#     df_wc= wc.generate(df['message'].str.cat(sep=" "))
+#     return df_wc
+def create_wordcloud(selected_user, df):
     if selected_user != 'Overall':
         df = df[df['user'] == selected_user]
-    wc =WordCloud(width=500, height=500, min_font_size=10,background_color='white')
-    df_wc= wc.generate(df['message'].str.cat(sep=" "))
-    return df_wc
 
-def most_common_words(selected_user,df):
-    f=open('stop_hinglish.txt','r')
-    stop_words= f.read()
+    # Filter out media/empty messages before generating
+    df = df[df['message'] != '<Media omitted>']
+    df = df[df['message'].str.strip() != '']
+
+    text = df['message'].str.cat(sep=" ").strip()
+    if not text:
+        return None  # caller must handle None
+
+    wc = WordCloud(width=500, height=500, min_font_size=10, background_color='white')
+    return wc.generate(text)
+
+# def most_common_words(selected_user,df):
+#     f=open('stop_hinglish.txt','r')
+#     stop_words= f.read()
+#     if selected_user != 'Overall':
+#         df = df[df['user'] == selected_user]
+#     temp = df[df['user'] != 'group_notification']
+#     temp = temp[temp['message'] != '<Media omitted>']
+#
+#     words = []
+#     for message in temp["message"]:
+#         for word in message.lower().split():
+#             if word not in stop_words:
+#                 words.append(word)
+#     most_common_df=pd.DataFrame(Counter(words).most_common(20))
+#
+#     return most_common_df
+def most_common_words(selected_user, df):
+    f = open('stop_hinglish.txt', 'r')
+    stop_words = f.read()
+    f.close()
+
     if selected_user != 'Overall':
         df = df[df['user'] == selected_user]
+
     temp = df[df['user'] != 'group_notification']
-    temp = temp[temp['message'] != '<Media omitted>']
+    temp = temp[~temp['message'].str.contains('Media omitted', na=False)]
+    temp = temp[~temp['message'].str.contains('This message was deleted', na=False)]
 
     words = []
     for message in temp["message"]:
         for word in message.lower().split():
             if word not in stop_words:
                 words.append(word)
-    most_common_df=pd.DataFrame(Counter(words).most_common(20))
 
+    if not words:
+        return None  # no words found
+
+    most_common_df = pd.DataFrame(Counter(words).most_common(20))
     return most_common_df
 
-def emoji_helper(selected_user,df):
+# def emoji_helper(selected_user,df):
+#     if selected_user != 'Overall':
+#         df = df[df['user'] == selected_user]
+#
+#     emojis = []
+#     for message in df['message']:
+#         emojis.extend([c for c in message if emoji.is_emoji(c)])
+#
+#     emoji_df=pd.DataFrame(Counter(emojis).most_common(len(Counter(emojis))))
+#
+#     return emoji_df
+def emoji_helper(selected_user, df):
     if selected_user != 'Overall':
         df = df[df['user'] == selected_user]
 
@@ -67,10 +117,11 @@ def emoji_helper(selected_user,df):
     for message in df['message']:
         emojis.extend([c for c in message if emoji.is_emoji(c)])
 
-    emoji_df=pd.DataFrame(Counter(emojis).most_common(len(Counter(emojis))))
+    if not emojis:
+        return None  # no emojis found
 
+    emoji_df = pd.DataFrame(Counter(emojis).most_common(len(Counter(emojis))))
     return emoji_df
-
 
 def monthly_timeline(selected_user,df):
     if selected_user != 'Overall':
